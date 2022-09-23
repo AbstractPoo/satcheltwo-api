@@ -18,10 +18,33 @@ admin.initializeApp({
 
 const uri = mongoConfig.uri;
 
+class DatabaseCache {
+    constructor(length) {
+        this.cache = []
+        this.length = length
+    }
+
+    push(document) {
+        this.check()
+        this.cache.push(document)
+    }
+
+    check() {
+        if (this.cache.length === this.length) {
+            this.cache.shift()
+        }
+    }
+
+    search(document) {
+
+    }
+}
+
 class DatabaseClient {
 
     constructor(client) {
         this.client = client
+        //this.clientCache = new DatabaseCache()
         // create a cache so there are less requests to db
     }
 
@@ -29,7 +52,8 @@ class DatabaseClient {
         try {
             await this.client.connect()
             const col = this.client.db("project").collection(collection)
-            return await col.insertOne(document)
+            const doc = await col.insertOne(document)
+            return doc
         }
         finally {
             await this.client.close()
