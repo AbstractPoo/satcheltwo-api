@@ -6,7 +6,7 @@
         res.status(403).send("Unauthorized")
     }
 }*/
-// PLEASE JUST MAKE HOMEWORKS WORK WITH THEIR OWN COLLECTION BECAUSE IT IS REALLY BAD RIGHT NEOW
+// ADD HOMEWORKS WORKING IN THEIR OWN COLLECTION
 const { MongoClient, ObjectId } = require("mongodb");
 const admin = require("firebase-admin")
 const config = require("../config.js");
