@@ -1,5 +1,3 @@
-const admin = require("firebase-admin")
-const serviceAccount = require("../config.js").firebase;
 const { DatabaseClient } = require("../helpers/auth.js")
 
 async function createUser(decodedToken) {
@@ -9,32 +7,43 @@ async function createUser(decodedToken) {
             uid: uid,
             email: email,
             name: name,
-            level: 0
+            level: 0,
+            classes: []
         }
-        if (!(name && email && uid)) {
-            console.log("user.js:18 missing argument", name, email, uid)
-            return { message: "Name, email or uid was not provided" }
+        if (!(await DatabaseClient.find("users", { uid: uid }))) {
+            if (!(name && email && uid)) {
+                console.log("user.js:18 missing argument", name, email, uid)
+                return { error: "Name, email or uid was not provided" }
+            } else {
+                await DatabaseClient.insertOne("users", userData)
+                return { message: "User created successfully" }
+            }
+        } else {
+            return { error: "Account already created" }
         }
-        await DatabaseClient.insertOne("users", userData)
-        return { message: "User created successfully" }
     }
     catch (e) {
-        return { message: "There was a problem creating the user" }
+        return { error: "There was a problem creating the user" }
     }
 }
 
 async function get(req) {
     try {
         if (req.userToCreate) {
-            return (await createUser(req.userToCreate))
+            const creationStatus = (await createUser(req.userToCreate))
+            if (creationStatus.error) {
+                return creationStatus
+            } else {
+                await get(req)
+            }
         }
         else if (req.userData) {
             return req.userData
         } else {
-            return { message: "User Data could not be found" }
+            return { error: "User Data could not be found" }
         }
     } catch (e) {
-        return { message: "There was a problem fetching userdata" }
+        return { error: "There was a problem fetching userdata" }
     }
 }
 
