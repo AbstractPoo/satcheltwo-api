@@ -4,17 +4,14 @@ async function create(req) {
     try {
         const { uid } = req.userData
         //const required = setdefaults(req.body, defaults)
-        console.log(req.body)
         const { name } = req.body
-        console.log(name)
         if (!(name)) {
             return { error: "You are missing a required field to create a class" }
         }
         await DatabaseClient.insertOne("classes", {
             creator: uid,
             name: name,
-            users: [{ uid: uid }],
-            homeworks: []
+            users: [{ uid: uid }]
         })
         return { message: "Class created successfully" }
     }
@@ -27,11 +24,10 @@ async function join(req) {
     try {
         const { _id } = req.body
         const { uid } = req.userData
-        console.log(_id, uid)
         const res = await DatabaseClient.updateOne(
             "classes",
             { _id: DatabaseClient.ObjectId(_id) },
-            { $push: { "users": { uid: uid } } }
+            { $addToSet: { "users": { uid: uid } } }
         )
         return res
     } catch (e) {
@@ -55,6 +51,7 @@ async function getAllUser(req) {
 
 async function getAll(req) {
     try {
+        const { uid } = req.userData
         const classes = await DatabaseClient.findMany("classes", {})
         return classes
     }
@@ -78,8 +75,26 @@ async function getAllCreator(req) {
     }
 }
 
+async function leave(req) {
+    try {
+        const { uid } = req.userData
+        const { _id } = req.body
+        const classes = await DatabaseClient.updateOne("classes", {
+            "_id": DatabaseClient.ObjectId(_id)
+        }, {
+            $pull: { "users": { uid: uid } }
+        })
+        return classes
+    }
+    catch (e) {
+        console.log(e)
+        return { error: "Could not fetch homework information" }
+    }
+}
+
 exports.create = create
 exports.getAll = getAll
 exports.join = join
 exports.getAllUser = getAllUser
 exports.getAllCreator = getAllCreator
+exports.leave = leave
