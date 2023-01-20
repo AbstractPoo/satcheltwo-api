@@ -1,18 +1,25 @@
 const { DatabaseClient } = require("../helpers/auth.js")
-
 async function create(req) {
     const { body } = req
     try {
-        const { title, description, set, due, classId } = body
-        const homeworkData = {
-            title: title,
-            description: description,
-            set: set,
-            due: due,
-            classId: classId
+        const { title, description, due, classId, resources, teacherName, teacherPhoto } = body
+        if (title && description && due && classId) {
+            const homeworkData = {
+                title: title,
+                description: description,
+                set: new Date(),
+                due: new Date(due),
+                resources: resources || [],
+                classId: DatabaseClient.ObjectId(classId),
+                usersCompleted: [],
+                teacherName: teacherName,
+                teacherPhoto: teacherPhoto
+            }
+            await DatabaseClient.insertOne("homeworks", homeworkData)
+            return { message: "Homework added successfully" }
+        } else {
+            return { error: "You are missing a field for the homework" }
         }
-        await DatabaseClient.insertOne("homeworks", { _id: DatabaseClient.ObjectId(classId) }, { $push: { homeworks: homeworkData } })
-        return { message: "Homework added successfully" }
     }
     catch (e) {
         return { error: "There was a problem setting the homework" }
@@ -22,9 +29,32 @@ async function create(req) {
 async function get(req) {
     try {
         const { uid } = req.userData
-        const classes = await DatabaseClient.findMany("classes", {
-            "users.uid": uid
-        })
+        const classes = await DatabaseClient.aggregate("classes", [
+            {
+                '$match': {
+                    'users.uid': uid
+                }
+            }, {
+                '$lookup': {
+                    'from': 'homeworks',
+                    'localField': '_id',
+                    'foreignField': 'classId',
+                    'as': 'homeworks'
+                }
+            }, {
+                '$unwind': {
+                    'path': '$homeworks'
+                }
+            }, {
+                "$replaceRoot": {
+                    "newRoot": "$homeworks"
+                }
+            }, {
+                "$sort": {
+                    "due": 1
+                }
+            }
+        ])
         return classes
     }
     catch (e) {
@@ -32,5 +62,90 @@ async function get(req) {
     }
 }
 
+async function getAllCreator(req) {
+    try {
+        const { uid } = req.userData
+        const classes = await DatabaseClient.aggregate("classes", [
+            {
+                '$match': {
+                    'creator': uid
+                }
+            }, {
+                '$lookup': {
+                    'from': 'homeworks',
+                    'localField': '_id',
+                    'foreignField': 'classId',
+                    'as': 'homeworks'
+                }
+            }, {
+                '$unwind': {
+                    'path': '$homeworks'
+                }
+            }, {
+                "$replaceRoot": {
+                    "newRoot": "$homeworks"
+                }
+            }, {
+                "$sort": {
+                    "due": 1
+                }
+            }
+        ])
+
+        return classes
+    }
+    catch (e) {
+        return { error: "Could not fetch homework information" }
+    }
+}
+
+async function complete(req) {
+    try {
+        const { uid } = req.userData
+        const { homeworkId } = req.body
+        const res = await DatabaseClient.updateOne(
+            "homeworks",
+            { id: homeworkId },
+            { $addToSet: { "usersCompleted": { uid: uid } } }
+        )
+        return res
+    }
+    catch (e) {
+        return { error: "Could not complete the homework" }
+    }
+}
+
+async function unComplete(req) {
+    try {
+        const { uid } = req.userData
+        const { homeworkId } = req.body
+        const res = await DatabaseClient.updateOne(
+            "homeworks",
+            { id: homeworkId },
+            { $pull: { "usersCompleted": { uid: uid } } }
+        )
+        return res
+    }
+    catch (e) {
+        return { error: "Could not uncomplete the homework" }
+    }
+}
+
+async function remove(req) {
+    try {
+        const { homeworkId } = req.body
+        const classes = await DatabaseClient.deleteOne("homeworks", { _id: DatabaseClient.ObjectId(homeworkId) })
+
+        return classes
+    }
+    catch (e) {
+        return { error: "Could not delete the homework" }
+    }
+}
+
 exports.create = create
 exports.get = get
+exports.getAllCreator = getAllCreator
+exports.remove = remove
+exports.complete = complete
+exports.unComplete = unComplete
