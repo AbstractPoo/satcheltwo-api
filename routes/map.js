@@ -24,6 +24,26 @@ exports.homework = {
         method: "get",
         level: 0,
         bind: homework.getAll
+    },
+    getAllCreator: {
+        method: "get",
+        level: 1,
+        bind: homework.getAllCreator
+    },
+    remove: {
+        method: "post",
+        level: 1,
+        bind: homework.remove
+    },
+    complete: {
+        method: "post",
+        level: 0,
+        bind: homework.complete
+    },
+    uncomplete: {
+        method: "post",
+        level: 0,
+        bind: homework.unComplete
     }
 }
 
@@ -32,6 +52,11 @@ exports.class = {
         method: "post",
         level: 1,
         bind: classes.create
+    },
+    leave: {
+        method: "post",
+        level: 0,
+        bind: classes.leave
     },
     get: {
         method: "get",
