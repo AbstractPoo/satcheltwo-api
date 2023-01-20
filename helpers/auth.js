@@ -6,7 +6,6 @@
         res.status(403).send("Unauthorized")
     }
 }*/
-// ADD HOMEWORKS WORKING IN THEIR OWN COLLECTION
 const { MongoClient, ObjectId } = require("mongodb");
 const admin = require("firebase-admin")
 const config = require("../config.js");
@@ -18,28 +17,6 @@ admin.initializeApp({
 });
 
 const uri = mongoConfig.uri;
-
-class DatabaseCache {
-    constructor(length) {
-        this.cache = []
-        this.length = length
-    }
-
-    push(document) {
-        this.check()
-        this.cache.push(document)
-    }
-
-    check() {
-        if (this.cache.length === this.length) {
-            this.cache.shift()
-        }
-    }
-
-    search(document) {
-
-    }
-}
 
 class DatabaseClient {
 
@@ -142,29 +119,41 @@ class DatabaseClient {
         }
     }
 
-    async aggregate(many, one, as) {
+    async deleteOne(collection, query) {
+        try {
+            const client = new MongoClient(uri);
+            try {
+                await client.connect()
+                const col = client.db("project").collection(collection)
+                const doc = await col.deleteOne(query)
+                return doc
+            }
+            finally {
+                await client.close()
+            }
+        }
+        catch (e) {
+            return { error: "Could not connect to the database" }
+        }
+    }
+
+    async aggregate(collection, query) {
         //https://www.stackchief.com/tutorials/%24lookup%20Examples%20%7C%20MongoDB
         //https://thecodebarbarian.com/a-nodejs-perspective-on-mongodb-36-lookup-expr
         try {
-            await this.client.connect()
-            const col = await this.client.db("project").collection(one.collection)
-            const docs = await col.aggregate(
-                [
-                    {
-                        $lookup: {
-                            from: many.collection,
-                            localField: one.field,
-                            foreignField: many.field,
-                            as: as
-                        }
-                    }
-
-                ]
-            ).toArray()
-            return docs
+            const client = new MongoClient(uri);
+            try {
+                await client.connect()
+                const col = client.db("project").collection(collection)
+                const doc = await col.aggregate(query).toArray()
+                return doc
+            }
+            finally {
+                await client.close()
+            }
         }
-        finally {
-            await this.client.close()
+        catch (e) {
+            return { error: "Could not connect to the database" }
         }
     }
 
@@ -173,24 +162,7 @@ class DatabaseClient {
     }
 }
 
-/*(async function() {
-    try {
-        await client.connect()
-        console.log(1)
-        col = client.db("project").collection("users")
-        console.log(2)
-        const doc = await col.findOne({ uid: "qGRBC1gsvNSzyrNQfto6706IUXC3" })
-        console.log(doc)
-    }
-    finally {
-        await client.close()
-    }
-})()*/
-
 const dbClient = new DatabaseClient()
-
-dbClient
-
 
 function authorise(routeLevel, tokenRequired) {
     return async function(req, res, next) {
@@ -199,28 +171,28 @@ function authorise(routeLevel, tokenRequired) {
         } else {
             const { authtoken } = req.headers
 
-            //try {
-            const decodedToken = await admin.auth().verifyIdToken(authtoken)
-            const user = await dbClient.find("users", { uid: decodedToken.uid })
-            if (user) {
-                const { level } = user
-                if (level >= (routeLevel || 0)) {
-                    req.userData = user
-                    next()
+            try {
+                const decodedToken = await admin.auth().verifyIdToken(authtoken)
+                const user = await dbClient.find("users", { uid: decodedToken.uid })
+                if (user) {
+                    const { level } = user
+                    if (level >= (routeLevel || 0)) {
+                        req.userData = user
+                        next()
+                    } else {
+                        res.json({ error: "You are not authorised to access this route" })
+                    }
                 } else {
-                    //res.status(403).send("Unauthorised")
-                    res.json({ error: "You are not authorised to access this route" })
-                }
-            } else {
-                if (decodedToken && tokenRequired && routeLevel === undefined) {
-                    req.userToCreate = decodedToken
-                    next()
+                    if (decodedToken && tokenRequired && routeLevel === undefined) {
+                        req.userToCreate = decodedToken
+                        next()
+                    }
                 }
             }
+            catch (e) {
+                res.json({ message: "There was a problem authorising the user" })
+            }
         }
-        //} catch (e) {
-        //    res.json({ message: "There was a problem authorising the user" })
-        //}
     }
 }
 
