@@ -18,7 +18,6 @@ for (const [namespace, routes] of Object.entries(routesMap)) {
             `/${namespace}/${route}`,
             authorise(settings.level, settings.tokenRequired),
             async (req, res) => {
-                //add req param requirements and auth limited routes
                 const data = await settings.bind(req)
                 res.json(data);
             }
@@ -27,8 +26,7 @@ for (const [namespace, routes] of Object.entries(routesMap)) {
 }
 
 api.get("/", async (req, res) => {
-    //await DatabaseClient.deleteMany("users", { uid: "lt1RyO5L3xWcZaeczdY3qHuoFNu1" })
-    res.send("deleted")
+    res.send("index")
 })
 
 api.listen(3000, () => {
