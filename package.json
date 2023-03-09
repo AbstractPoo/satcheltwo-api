@@ -16,5 +16,8 @@
     "firebase-admin": "^11.0.1",
     "mongodb": "^4.10.0",
     "node-fetch": "^3.2.6"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
   }
 }
