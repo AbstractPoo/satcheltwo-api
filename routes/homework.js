@@ -1,4 +1,4 @@
-const { DatabaseClient } = require("../helpers/auth.js");
+const { DatabaseClient } = require("../helpers/databaseclient.js");
 // graphql https://www.mongodb.com/docs/realm/web/graphql-apollo-react/
 async function create(req) {
   const { body } = req;

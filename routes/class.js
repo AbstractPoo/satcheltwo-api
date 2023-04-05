@@ -1,4 +1,4 @@
-const { DatabaseClient } = require("../helpers/auth.js");
+const { DatabaseClient } = require("../helpers/databaseclient");
 
 async function create(req) {
   try {
